@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 # Speed Tunnel - Installer
-# Usage: bash <(curl -s https://raw.githubusercontent.com/SpeedwiT/SpeedTunnel/main/install.sh)
+# Usage: bash <(curl -fsSL https://raw.githubusercontent.com/SpeedwiT/SpeedTunnel/main/install.sh)
 #        bash install.sh --update
 # Github: https://github.com/SpeedwiT/SpeedTunnel
 
@@ -24,7 +24,7 @@ is_update=false
 
 need_root() {
   if [[ $EUID -ne 0 ]]; then
-    echo -e "${RED}لطفا با sudo اجرا کنید: sudo bash install.sh${NC}"
+    echo -e "${RED}Please run with sudo: sudo bash install.sh${NC}"
     exit 1
   fi
 }
@@ -39,72 +39,63 @@ detect_arch() {
 }
 
 install_deps() {
-  echo -e "${CYAN}[1/6] نصب پیش‌نیازها...${NC}"
+  echo -e "${CYAN}[1/6] Installing dependencies...${NC}"
   apt-get update -qq 2>&1 | tail -1 || true
-  apt-get install -y curl wget jq openssl tar 2>&1 | tail -5 || true
+  apt-get install -y curl wget jq openssl tar golang-go 2>&1 | tail -5 || true
 }
 
 build_or_download() {
-  echo -e "${CYAN}[2/6] دریافت/ساخت باینری...${NC}"
+  echo -e "${CYAN}[2/6] Fetching/building binary...${NC}"
   arch=$(detect_arch)
-  # Try download release first
   url="https://github.com/${REPO}/releases/latest/download/speedtunnel-linux-${arch}"
   if curl -fsSL "$url" -o "$BIN" 2>/dev/null && [[ -s "$BIN" ]]; then
-    echo -e "${GREEN}✔ باینری از Release دانلود شد${NC}"
+    echo -e "${GREEN}✔ Binary downloaded from Release${NC}"
     chmod +x "$BIN"
     return 0
   fi
-  echo -e "${YELLOW}Release یافت نشد، در حال ساخت از سورس...${NC}"
-  # Build from source
+  echo -e "${YELLOW}Release not found, building from source...${NC}"
   if ! command -v go >/dev/null 2>&1; then
-    echo -e "${YELLOW}نصب Go...${NC}"
+    echo -e "${YELLOW}Installing Go...${NC}"
     apt-get install -y golang-go 2>&1 | tail -3 || true
   fi
   tmpdir=$(mktemp -d)
-  echo -e "دانلود سورس از گیتهاب..."
+  echo -e "Downloading source from GitHub..."
   if curl -fsSL "https://github.com/${REPO}/archive/refs/heads/main.tar.gz" -o "$tmpdir/src.tar.gz"; then
     tar -xzf "$tmpdir/src.tar.gz" -C "$tmpdir"
-    src=$(find "$tmpdir" -maxdepth 1 -type d -name "SpeedTunnel*")
-    if [[ -f "$src/go.mod" ]]; then
+    src=$(find "$tmpdir" -maxdepth 1 -type d -name "SpeedTunnel*" | head -1)
+    if [[ -n "$src" && -f "$src/go.mod" ]]; then
+      echo -e "Building from $src ..."
       (cd "$src" && go build -o "$BIN" ./cmd/speedtunnel && chmod +x "$BIN")
-      echo -e "${GREEN}✔ باینری ساخته شد${NC}"
+      echo -e "${GREEN}✔ Binary built successfully${NC}"
     else
-      # Fallback: try local build if running from repo
-      if [[ -f "./go.mod" && -f "./cmd/speedtunnel/main.go" ]]; then
-        go build -o "$BIN" ./cmd/speedtunnel && chmod +x "$BIN"
-        echo -e "${GREEN}✔ باینری از سورس لوکال ساخته شد${NC}"
-      else
-        echo -e "${RED}خطا: سورس یافت نشد${NC}"
-        exit 1
-      fi
-    fi
-  else
-    # Local fallback
-    if [[ -f "./go.mod" ]]; then
-      go build -o "$BIN" ./cmd/speedtunnel && chmod +x "$BIN"
-      echo -e "${GREEN}✔ باینری از سورس لوکال ساخته شد${NC}"
-    else
-      echo -e "${RED}خطا در دانلود سورس${NC}"
+      echo -e "${RED}Error: source structure invalid${NC}"
+      echo -e "${DIM}Contents of $tmpdir:${NC}"
+      ls -la "$tmpdir" 2>/dev/null || true
+      rm -rf "$tmpdir"
       exit 1
     fi
+  else
+    echo -e "${RED}Error downloading source${NC}"
+    rm -rf "$tmpdir"
+    exit 1
   fi
   rm -rf "$tmpdir"
 }
 
 setup_config() {
-  echo -e "${CYAN}[3/6] تنظیم کانفیگ...${NC}"
+  echo -e "${CYAN}[3/6] Setting up config...${NC}"
   mkdir -p "$CONFIG_DIR"
   if [[ ! -f "$CONFIG" ]]; then
     echo '{"version":"1.0.0","tunnels":[]}' > "$CONFIG"
     chmod 600 "$CONFIG"
-    echo -e "${GREEN}✔ کانفیگ اولیه ساخته شد: $CONFIG${NC}"
+    echo -e "${GREEN}✔ Config created: $CONFIG${NC}"
   else
-    echo -e "${GREEN}✔ کانفیگ موجود حفظ شد${NC}"
+    echo -e "${GREEN}✔ Existing config preserved${NC}"
   fi
 }
 
 setup_service() {
-  echo -e "${CYAN}[4/6] نصب سرویس systemd...${NC}"
+  echo -e "${CYAN}[4/6] Installing systemd service...${NC}"
   cat > /etc/systemd/system/${SERVICE}.service <<EOF
 [Unit]
 Description=Speed Tunnel - Fast Secure Tunnel
@@ -122,28 +113,25 @@ WantedBy=multi-user.target
 EOF
   systemctl daemon-reload
   systemctl enable $SERVICE >/dev/null 2>&1 || true
-  echo -e "${GREEN}✔ سرویس نصب شد${NC}"
+  echo -e "${GREEN}✔ Service installed${NC}"
 }
 
 setup_menu() {
-  echo -e "${CYAN}[5/6] نصب منو...${NC}"
-  # Find menu.sh
+  echo -e "${CYAN}[5/6] Installing menu...${NC}"
   for p in "./scripts/menu.sh" "$(dirname "$0")/scripts/menu.sh" "/root/project/scripts/menu.sh"; do
     if [[ -f "$p" ]]; then
       cp "$p" /usr/local/bin/speedtunnel-menu
       chmod +x /usr/local/bin/speedtunnel-menu
-      # alias command
       ln -sf /usr/local/bin/speedtunnel-menu /usr/local/bin/st 2>/dev/null || true
-      echo -e "${GREEN}✔ منو نصب شد: speedtunnel-menu / st${NC}"
+      echo -e "${GREEN}✔ Menu installed: speedtunnel-menu / st${NC}"
       return
     fi
   done
-  # fallback: download from github
-  curl -fsSL "https://raw.githubusercontent.com/${REPO}/main/scripts/menu.sh" -o /usr/local/bin/speedtunnel-menu 2>/dev/null && chmod +x /usr/local/bin/speedtunnel-menu && ln -sf /usr/local/bin/speedtunnel-menu /usr/local/bin/st 2>/dev/null || echo -e "${YELLOW}منو یافت نشد، بعدا دستی اضافه کنید${NC}"
+  curl -fsSL "https://raw.githubusercontent.com/${REPO}/main/scripts/menu.sh" -o /usr/local/bin/speedtunnel-menu 2>/dev/null && chmod +x /usr/local/bin/speedtunnel-menu && ln -sf /usr/local/bin/speedtunnel-menu /usr/local/bin/st 2>/dev/null || echo -e "${YELLOW}Menu not found, add manually later${NC}"
 }
 
 finalize() {
-  echo -e "${CYAN}[6/6] راه‌اندازی...${NC}"
+  echo -e "${CYAN}[6/6] Starting...${NC}"
   if systemctl is-active --quiet $SERVICE 2>/dev/null; then
     systemctl restart $SERVICE || true
   else
@@ -152,20 +140,20 @@ finalize() {
   sleep 1
   echo ""
   echo -e "${GREEN}╔══════════════════════════════════════════════════╗${NC}"
-  echo -e "${GREEN}║${NC}  ${WHITE}✔ Speed Tunnel نصب شد!${NC}                        ${GREEN}║${NC}"
+  echo -e "${GREEN}║${NC}  ${WHITE}✔ Speed Tunnel installed!${NC}                        ${GREEN}║${NC}"
   echo -e "${GREEN}╚══════════════════════════════════════════════════╝${NC}"
-  echo -e "  باینری: ${WHITE}$BIN${NC}"
-  echo -e "  کانفیگ: ${WHITE}$CONFIG${NC}"
-  echo -e "  سرویس:  ${WHITE}systemctl status $SERVICE${NC}"
+  echo -e "  Binary:  ${WHITE}$BIN${NC}"
+  echo -e "  Config:  ${WHITE}$CONFIG${NC}"
+  echo -e "  Service: ${WHITE}systemctl status $SERVICE${NC}"
   echo ""
-  echo -e "  ${CYAN}برای مدیریت تانل‌ها دستور زیر را بزنید:${NC}"
-  echo -e "  ${WHITE}sudo speedtunnel-menu${NC}  ${WHITE}(یا st)${NC}"
+  echo -e "  ${CYAN}Manage tunnels with:${NC}"
+  echo -e "  ${WHITE}sudo speedtunnel-menu${NC}  ${WHITE}(or st)${NC}"
   echo ""
   echo -e "  ${WHITE}Github:  https://github.com/${REPO}${NC}"
   echo -e "  ${WHITE}Channel: @Speedw_IT  Support: @SpeedwIT${NC}"
   echo ""
   if ! $is_update; then
-    echo -ne "${CYAN}آیا می‌خواهید الان وارد منو شوید؟ (y/N): ${NC}"
+    echo -ne "${CYAN}Enter menu now? (y/N): ${NC}"
     read -r ans
     if [[ "$ans" == "y" || "$ans" == "Y" ]]; then
       exec /usr/local/bin/speedtunnel-menu 2>/dev/null || exec bash /usr/local/bin/speedtunnel-menu
