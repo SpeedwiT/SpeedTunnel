@@ -15,7 +15,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-CYAN='\033[0;36m'
+ORANGE='\033[0;38;5;208m'
 MAGENTA='\033[0;35m'
 WHITE='\033[1;37m'
 DIM='\033[2m'
@@ -42,23 +42,23 @@ ensure_config() {
 
 banner() {
   clear
-  echo -e "${CYAN}╔══════════════════════════════════════════════════════════╗${NC}"
-  echo -e "${CYAN}║${NC}                                                          ${CYAN}║${NC}"
-  echo -e "${CYAN}║${NC}         ███████╗██████╗ ███████╗███████╗██████╗          ${CYAN}║${NC}"
-  echo -e "${CYAN}║${NC}         ██╔════╝██╔══██╗██╔════╝██╔════╝██╔══██╗         ${CYAN}║${NC}"
-  echo -e "${CYAN}║${NC}         ███████╗██████╔╝█████╗  █████╗  ██║  ██║         ${CYAN}║${NC}"
-  echo -e "${CYAN}║${NC}         ╚════██║██╔═══╝ ██╔══╝  ██╔══╝  ██║  ██║         ${CYAN}║${NC}"
-  echo -e "${CYAN}║${NC}         ███████║██║     ███████╗███████╗██████╔╝         ${CYAN}║${NC}"
-  echo -e "${CYAN}║${NC}         ╚══════╝╚═╝     ╚══════╝╚══════╝╚═════╝          ${CYAN}║${NC}"
-  echo -e "${CYAN}║${NC}                                                          ${CYAN}║${NC}"
-  echo -e "${CYAN}║${NC}    ████████╗██╗   ██╗███╗   ██╗███╗   ██╗███████╗██╗     ${CYAN}║${NC}"
-  echo -e "${CYAN}║${NC}    ╚══██╔══╝██║   ██║████╗  ██║████╗  ██║██╔════╝██║     ${CYAN}║${NC}"
-  echo -e "${CYAN}║${NC}       ██║   ██║   ██║██╔██╗ ██║██╔██╗ ██║█████╗  ██║     ${CYAN}║${NC}"
-  echo -e "${CYAN}║${NC}       ██║   ██║   ██║██║╚██╗██║██║╚██╗██║██╔══╝  ██║     ${CYAN}║${NC}"
-  echo -e "${CYAN}║${NC}     ██║   ╚██████╔╝██║ ╚████║██║ ╚████║███████╗███████╗  ${CYAN}║${NC}"
-  echo -e "${CYAN}║${NC}     ╚═╝    ╚═════╝ ╚═╝  ╚═══╝╚═╝  ╚═══╝╚══════╝╚══════╝  ${CYAN}║${NC}"
-  echo -e "${CYAN}║${NC}                                                          ${CYAN}║${NC}"
-  echo -e "${CYAN}╚══════════════════════════════════════════════════════════╝${NC}"
+  echo -e "${ORANGE}╔══════════════════════════════════════════════════════════╗${NC}"
+  echo -e "${ORANGE}║${NC}                                                          ${ORANGE}║${NC}"
+  echo -e "${ORANGE}║${NC}         ███████╗██████╗ ███████╗███████╗██████╗          ${ORANGE}║${NC}"
+  echo -e "${ORANGE}║${NC}         ██╔════╝██╔══██╗██╔════╝██╔════╝██╔══██╗         ${ORANGE}║${NC}"
+  echo -e "${ORANGE}║${NC}         ███████╗██████╔╝█████╗  █████╗  ██║  ██║         ${ORANGE}║${NC}"
+  echo -e "${ORANGE}║${NC}         ╚════██║██╔═══╝ ██╔══╝  ██╔══╝  ██║  ██║         ${ORANGE}║${NC}"
+  echo -e "${ORANGE}║${NC}         ███████║██║     ███████╗███████╗██████╔╝         ${ORANGE}║${NC}"
+  echo -e "${ORANGE}║${NC}         ╚══════╝╚═╝     ╚══════╝╚══════╝╚═════╝          ${ORANGE}║${NC}"
+  echo -e "${ORANGE}║${NC}                                                          ${ORANGE}║${NC}"
+  echo -e "${ORANGE}║${NC}    ████████╗██╗   ██╗███╗   ██╗███╗   ██╗███████╗██╗     ${ORANGE}║${NC}"
+  echo -e "${ORANGE}║${NC}    ╚══██╔══╝██║   ██║████╗  ██║████╗  ██║██╔════╝██║     ${ORANGE}║${NC}"
+  echo -e "${ORANGE}║${NC}       ██║   ██║   ██║██╔██╗ ██║██╔██╗ ██║█████╗  ██║     ${ORANGE}║${NC}"
+  echo -e "${ORANGE}║${NC}       ██║   ██║   ██║██║╚██╗██║██║╚██╗██║██╔══╝  ██║     ${ORANGE}║${NC}"
+  echo -e "${ORANGE}║${NC}     ██║   ╚██████╔╝██║ ╚████║██║ ╚████║███████╗███████╗  ${ORANGE}║${NC}"
+  echo -e "${ORANGE}║${NC}     ╚═╝    ╚═════╝ ╚═╝  ╚═══╝╚═╝  ╚═══╝╚══════╝╚══════╝  ${ORANGE}║${NC}"
+  echo -e "${ORANGE}║${NC}                                                          ${ORANGE}║${NC}"
+  echo -e "${ORANGE}╚══════════════════════════════════════════════════════════╝${NC}"
   echo ""
   echo -e "  ${GREEN}⚡ Speed Tunnel v${VERSION}${NC}  ${DIM}— Fast • Secure • Anti-DPI${NC}"
   echo -e "  ${DIM}Github:${NC} ${WHITE}https://github.com/${REPO}${NC}"
@@ -83,7 +83,7 @@ show_status() {
   if has_jq; then
     cnt=$(jq '.tunnels | length' "$CONFIG" 2>/dev/null || echo 0)
     enabled=$(jq '[.tunnels[] | select(.enabled==true)] | length' "$CONFIG" 2>/dev/null || echo 0)
-    echo -e " Tunnels: ${CYAN}$cnt${NC} (Active: ${GREEN}$enabled${NC})"
+    echo -e " Tunnels: ${ORANGE}$cnt${NC} (Active: ${GREEN}$enabled${NC})"
     echo ""
     if [[ "$cnt" -gt 0 ]]; then
       echo -e "${BOLD}── Tunnel List ──${NC}"
@@ -116,14 +116,14 @@ show_status() {
 create_tunnel() {
   banner
   echo -e "${BOLD}${WHITE}── Create New Tunnel ──${NC}\n"
-  echo -ne "${CYAN}Tunnel name: ${NC}"
+  echo -ne "${ORANGE}Tunnel name: ${NC}"
   read -r tname
   [[ -z "$tname" ]] && tname="tunnel-$(date +%s | tail -c 5)"
 
   echo -e "${YELLOW}Select server role:${NC}"
   echo "  1) iran   (Client - Iran server, connects outbound)"
   echo "  2) kharej (Server - Foreign server, listens for Iran)"
-  echo -ne "${CYAN}Choice [1-2]: ${NC}"
+  echo -ne "${ORANGE}Choice [1-2]: ${NC}"
   read -r role_sel
   if [[ "$role_sel" == "2" ]]; then role="kharej"; else role="iran"; fi
 
@@ -132,7 +132,7 @@ create_tunnel() {
   echo "  2) SpeedHTTP     (HTTP/2 Fake - Stable, looks like browser traffic)"
   echo "  3) SpeedReverse  (For when Iran has no international internet - Iran connects out)"
   echo "  4) SpeedICMP     (Emergency - ICMP/DNS fallback)"
-  echo -ne "${CYAN}Choice [1-4] default 1: ${NC}"
+  echo -ne "${ORANGE}Choice [1-4] default 1: ${NC}"
   read -r tr_sel
   case "$tr_sel" in
     2) transport="speedhttp" ;;
@@ -141,17 +141,17 @@ create_tunnel() {
     *) transport="speedtls" ;;
   esac
 
-  echo -ne "${CYAN}Listen port on foreign server [e.g. 443]: ${NC}"
+  echo -ne "${ORANGE}Listen port on foreign server [e.g. 443]: ${NC}"
   read -r listen_port
-  echo -ne "${CYAN}Local service port on Iran [e.g. 443]: ${NC}"
+  echo -ne "${ORANGE}Local service port on Iran [e.g. 443]: ${NC}"
   read -r remote_port
-  echo -ne "${CYAN}Foreign server address (only for iran role) [e.g. 1.2.3.4]: ${NC}"
+  echo -ne "${ORANGE}Foreign server address (only for iran role) [e.g. 1.2.3.4]: ${NC}"
   read -r remote_addr
-  echo -ne "${CYAN}Tunnel control port [default 7000]: ${NC}"
+  echo -ne "${ORANGE}Tunnel control port [default 7000]: ${NC}"
   read -r control_port
-  echo -ne "${CYAN}Security secret (empty = auto-generate): ${NC}"
+  echo -ne "${ORANGE}Security secret (empty = auto-generate): ${NC}"
   read -r secret
-  echo -ne "${CYAN}SNI spoof domain [default www.digikala.com]: ${NC}"
+  echo -ne "${ORANGE}SNI spoof domain [default www.digikala.com]: ${NC}"
   read -r sni
 
   [[ -z "$listen_port" ]] && listen_port=443
@@ -197,11 +197,11 @@ list_tunnels() {
     pause; return
   fi
   jq -r '.tunnels | to_entries[] | "\(.key+1)) \(.value.id) | \(.value.name) | \(.value.role) | \(.value.transport) | :\(.value.listen_port) → :\(.value.remote_port) | enabled:\(.value.enabled)"' "$CONFIG" | while IFS= read -r line; do
-    echo -e "  ${CYAN}$line${NC}"
+    echo -e "  ${ORANGE}$line${NC}"
   done
   echo ""
   echo "  d) Delete tunnel   e) Edit SNI/Port   t) Toggle enabled   b) Back"
-  echo -ne "${CYAN}Choice: ${NC}"
+  echo -ne "${ORANGE}Choice: ${NC}"
   read -r sel
   case "$sel" in
     d|D)
@@ -246,9 +246,9 @@ bot_setup() {
   cur_admin=$(jq -r '.bot_admin_id // 0' "$CONFIG")
   echo -e " Current token: ${DIM}${cur_token:0:12}...${NC}"
   echo -e " Current Admin ID: ${WHITE}$cur_admin${NC}\n"
-  echo -ne "${CYAN}Bot token (empty = no change): ${NC}"
+  echo -ne "${ORANGE}Bot token (empty = no change): ${NC}"
   read -r ntok
-  echo -ne "${CYAN}Admin numeric ID (empty = no change): ${NC}"
+  echo -ne "${ORANGE}Admin numeric ID (empty = no change): ${NC}"
   read -r nadm
   tmp=$(mktemp)
   if [[ -n "$ntok" ]]; then
@@ -301,7 +301,7 @@ main_menu() {
     echo -e "  ${GREEN}9)${NC} ${RED}Uninstall Speed Tunnel${NC}"
     echo -e "  ${GREEN}0)${NC} Exit"
     echo ""
-    echo -ne "${CYAN}Your choice [0-9]: ${NC}"
+    echo -ne "${ORANGE}Your choice [0-9]: ${NC}"
     read -r choice
     case "$choice" in
       1) create_tunnel ;;

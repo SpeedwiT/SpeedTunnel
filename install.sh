@@ -15,7 +15,7 @@ VERSION="1.0.0"
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-CYAN='\033[0;36m'
+ORANGE='\033[0;38;5;208m'
 WHITE='\033[1;37m'
 NC='\033[0m'
 
@@ -39,13 +39,13 @@ detect_arch() {
 }
 
 install_deps() {
-  echo -e "${CYAN}[1/6] Installing dependencies...${NC}"
+  echo -e "${ORANGE}[1/6] Installing dependencies...${NC}"
   apt-get update -qq 2>&1 | tail -1 || true
   apt-get install -y curl wget jq openssl tar golang-go 2>&1 | tail -5 || true
 }
 
 build_or_download() {
-  echo -e "${CYAN}[2/6] Fetching/building binary...${NC}"
+  echo -e "${ORANGE}[2/6] Fetching/building binary...${NC}"
   arch=$(detect_arch)
   url="https://github.com/${REPO}/releases/latest/download/speedtunnel-linux-${arch}"
   if curl -fsSL "$url" -o "$BIN" 2>/dev/null && [[ -s "$BIN" ]]; then
@@ -83,7 +83,7 @@ build_or_download() {
 }
 
 setup_config() {
-  echo -e "${CYAN}[3/6] Setting up config...${NC}"
+  echo -e "${ORANGE}[3/6] Setting up config...${NC}"
   mkdir -p "$CONFIG_DIR"
   if [[ ! -f "$CONFIG" ]]; then
     echo '{"version":"1.0.0","tunnels":[]}' > "$CONFIG"
@@ -95,7 +95,7 @@ setup_config() {
 }
 
 setup_service() {
-  echo -e "${CYAN}[4/6] Installing systemd service...${NC}"
+  echo -e "${ORANGE}[4/6] Installing systemd service...${NC}"
   cat > /etc/systemd/system/${SERVICE}.service <<EOF
 [Unit]
 Description=Speed Tunnel - Fast Secure Tunnel
@@ -117,7 +117,7 @@ EOF
 }
 
 setup_menu() {
-  echo -e "${CYAN}[5/6] Installing menu...${NC}"
+  echo -e "${ORANGE}[5/6] Installing menu...${NC}"
   for p in "./scripts/menu.sh" "$(dirname "$0")/scripts/menu.sh" "/root/project/scripts/menu.sh"; do
     if [[ -f "$p" ]]; then
       cp "$p" /usr/local/bin/speedtunnel-menu
@@ -131,7 +131,7 @@ setup_menu() {
 }
 
 finalize() {
-  echo -e "${CYAN}[6/6] Starting...${NC}"
+  echo -e "${ORANGE}[6/6] Starting...${NC}"
   if systemctl is-active --quiet $SERVICE 2>/dev/null; then
     systemctl restart $SERVICE || true
   else
@@ -146,14 +146,14 @@ finalize() {
   echo -e "  Config:  ${WHITE}$CONFIG${NC}"
   echo -e "  Service: ${WHITE}systemctl status $SERVICE${NC}"
   echo ""
-  echo -e "  ${CYAN}Manage tunnels with:${NC}"
+  echo -e "  ${ORANGE}Manage tunnels with:${NC}"
   echo -e "  ${WHITE}sudo speedtunnel-menu${NC}  ${WHITE}(or st)${NC}"
   echo ""
   echo -e "  ${WHITE}Github:  https://github.com/${REPO}${NC}"
   echo -e "  ${WHITE}Channel: @Speedw_IT  Support: @SpeedwIT${NC}"
   echo ""
   if ! $is_update; then
-    echo -ne "${CYAN}Enter menu now? (y/N): ${NC}"
+    echo -ne "${ORANGE}Enter menu now? (y/N): ${NC}"
     read -r ans
     if [[ "$ans" == "y" || "$ans" == "Y" ]]; then
       exec /usr/local/bin/speedtunnel-menu 2>/dev/null || exec bash /usr/local/bin/speedtunnel-menu
@@ -164,7 +164,7 @@ finalize() {
 main() {
   need_root
   echo -e "${WHITE}🚀 Speed Tunnel Installer v${VERSION}${NC}"
-  echo -e "${CYAN}Repo: https://github.com/${REPO}${NC}\n"
+  echo -e "${ORANGE}Repo: https://github.com/${REPO}${NC}\n"
   install_deps
   build_or_download
   setup_config
