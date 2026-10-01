@@ -1,4 +1,4 @@
-speedtunnel
+/speedtunnel
 /tmp/
 *.log
 /etc/speedtunnel/config.json
