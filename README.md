@@ -9,7 +9,8 @@
 [![Support](https://img.shields.io/badge/Support-@SpeedwIT-26A5E4.svg)](https://t.me/SpeedwIT)
 
 **Github:** https://github.com/SpeedwiT/SpeedTunnel  
-**Channel:** [@Speedw_IT](https://t.me/Speedw_IT) — **Support:** [@SpeedwIT](https://t.me/SpeedwIT)
+**Channel:** [@Speedw_IT](https://t.me/Speedw_IT)  
+**Support:** [@SpeedwIT](https://t.me/SpeedwIT)
 
 ---
 
