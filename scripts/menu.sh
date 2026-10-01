@@ -42,15 +42,28 @@ ensure_config() {
 
 banner() {
   clear
-  echo -e "${CYAN}╔════════════════════════════════════════════════════════════╗${NC}"
-  echo -e "${CYAN}║${NC}  ${BOLD}${WHITE}░░█▀▀ █▀█ █▀▀ █▀▀ █▀▄░░▀█▀ █░█ █▀█ █▀█ █▀▀ █░░${NC} ${CYAN}║${NC}"
-  echo -e "${CYAN}║${NC}  ${BOLD}${WHITE}░░▀▀█ █▀▀ █▀▀ █▀▀ █░█░░░█░ █░█ █░█ █░█ █▀▀ █░░${NC} ${CYAN}║${NC}"
-  echo -e "${CYAN}║${NC}  ${BOLD}${WHITE}░░▀▀▀ ▀░░ ▀▀▀ ▀▀▀ ▀▀░░░░▀░ ▀▀▀ ▀░▀ ▀░▀ ▀▀▀ ▀▀▀${NC} ${CYAN}║${NC}"
-  echo -e "${CYAN}║${NC}                                                          ${CYAN}║${NC}"
-  echo -e "${CYAN}║${NC}   ${GREEN}⚡ Speed Tunnel v${VERSION}${NC}  ${DIM}— Fast • Secure • Anti-DPI${NC}      ${CYAN}║${NC}"
-  echo -e "${CYAN}║${NC}   ${DIM}Github:${NC} ${WHITE}https://github.com/${REPO}${NC}              ${CYAN}║${NC}"
-  echo -e "${CYAN}║${NC}   ${DIM}Channel:${NC} ${WHITE}@Speedw_IT${NC}  ${DIM}Support:${NC} ${WHITE}@SpeedwIT${NC}            ${CYAN}║${NC}"
-  echo -e "${CYAN}╚════════════════════════════════════════════════════════════╝${NC}"
+  echo -e "${CYAN}"
+  echo "  ╔══════════════════════════════════════════════════════════╗"
+  echo "  ║                                                          ║"
+  echo "  ║   ███████╗██████╗ ███████╗███████╗██████╗              ║"
+  echo "  ║   ██╔════╝██╔══██╗██╔════╝██╔════╝██╔══██╗             ║"
+  echo "  ║   ███████╗██████╔╝█████╗  █████╗  ██║  ██║             ║"
+  echo "  ║   ╚════██║██╔═══╝ ██╔══╝  ██╔══╝  ██║  ██║             ║"
+  echo "  ║   ███████║██║     ███████╗███████╗██████╔╝             ║"
+  echo "  ║   ╚══════╝╚═╝     ╚══════╝╚══════╝╚═════╝              ║"
+  echo "  ║                                                          ║"
+  echo "  ║   ████████╗██╗   ██╗███╗   ██╗███╗   ██╗███████╗██╗     ║"
+  echo "  ║   ╚══██╔══╝██║   ██║████╗  ██║████╗  ██║██╔════╝██║     ║"
+  echo "  ║      ██║   ██║   ██║██╔██╗ ██║██╔██╗ ██║█████╗  ██║     ║"
+  echo "  ║      ██║   ██║   ██║██║╚██╗██║██║╚██╗██║██╔══╝  ██║     ║"
+  echo "  ║      ██║   ╚██████╔╝██║ ╚████║██║ ╚████║███████╗███████╗║"
+  echo "  ║      ╚═╝    ╚═════╝ ╚═╝  ╚═══╝╚═╝  ╚═══╝╚══════╝╚══════╝║"
+  echo "  ║                                                          ║"
+  echo "  ╚══════════════════════════════════════════════════════════╝"
+  echo -e "${NC}"
+  echo -e "  ${GREEN}⚡ Speed Tunnel v${VERSION}${NC}  ${DIM}— Fast • Secure • Anti-DPI${NC}"
+  echo -e "  ${DIM}Github:${NC} ${WHITE}https://github.com/${REPO}${NC}"
+  echo -e "  ${DIM}Channel:${NC} ${WHITE}@Speedw_IT${NC}  ${DIM}Support:${NC} ${WHITE}@SpeedwIT${NC}"
   echo ""
 }
 
@@ -58,9 +71,9 @@ pause() { echo -ne "${DIM}Press Enter to continue...${NC}"; read -r _; }
 
 service_status() {
   if systemctl is-active --quiet $SERVICE 2>/dev/null; then
-    echo -e "${GREEN}● Active (running)${NC}"
+    echo -e "${GREEN}● Active${NC}"
   else
-    echo -e "${RED}● Inactive (stopped)${NC}"
+    echo -e "${RED}● Inactive${NC}"
   fi
 }
 
@@ -257,7 +270,7 @@ update_from_github() {
   if curl -fsSL "https://github.com/${REPO}/archive/refs/heads/main.tar.gz" -o "$tmpdir/main.tar.gz"; then
     echo -e "${GREEN}Downloaded. Installing...${NC}"
     tar -xzf "$tmpdir/main.tar.gz" -C "$tmpdir"
-    extracted=$(find "$tmpdir" -maxdepth 1 -type d -name "SpeedTunnel*")
+    extracted=$(find "$tmpdir" -maxdepth 1 -type d -name "SpeedTunnel*" | head -1)
     if [[ -f "$extracted/install.sh" ]]; then
       bash "$extracted/install.sh" --update
     else
@@ -278,13 +291,13 @@ main_menu() {
   while true; do
     banner
     echo -e "${BOLD}${WHITE}  Main Menu${NC}  $(service_status)  ${DIM}Config: $CONFIG${NC}\n"
-    echo -e "  ${GREEN}1)${NC} ${WHITE}Create New Tunnel${NC}          ${DIM}— Create Tunnel${NC}"
-    echo -e "  ${GREEN}2)${NC} ${WHITE}Manage Tunnels${NC}            ${DIM}— List / Edit / Delete / Toggle${NC}"
-    echo -e "  ${GREEN}3)${NC} ${WHITE}View Status${NC}              ${DIM}— Status & Health Check${NC}"
-    echo -e "  ${GREEN}4)${NC} ${WHITE}Telegram Bot Settings${NC}        ${DIM}— Telegram Bot${NC}"
-    echo -e "  ${GREEN}5)${NC} ${WHITE}View Service Logs${NC}            ${DIM}— Logs${NC}"
-    echo -e "  ${GREEN}6)${NC} ${WHITE}Update from Github${NC}             ${DIM}— Update from Github${NC}"
-    echo -e "  ${GREEN}7)${NC} ${WHITE}Show Raw Config${NC}            ${DIM}— Show Config${NC}"
+    echo -e "  ${GREEN}1)${NC} ${WHITE}Create New Tunnel${NC}"
+    echo -e "  ${GREEN}2)${NC} ${WHITE}Manage Tunnels${NC}"
+    echo -e "  ${GREEN}3)${NC} ${WHITE}View Status${NC}"
+    echo -e "  ${GREEN}4)${NC} ${WHITE}Telegram Bot Settings${NC}"
+    echo -e "  ${GREEN}5)${NC} ${WHITE}View Service Logs${NC}"
+    echo -e "  ${GREEN}6)${NC} ${WHITE}Update from Github${NC}"
+    echo -e "  ${GREEN}7)${NC} ${WHITE}Show Raw Config${NC}"
     echo -e "  ${GREEN}8)${NC} ${YELLOW}Restart Service${NC}"
     echo -e "  ${GREEN}9)${NC} ${RED}Uninstall Speed Tunnel${NC}"
     echo -e "  ${GREEN}0)${NC} Exit"
