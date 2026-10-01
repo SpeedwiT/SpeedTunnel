@@ -1,6 +1,6 @@
 # ⚡ Speed Tunnel
 
-> تانل قدرتمند، پایدار و ضد اختلال برای سرورهای اوبونتو — با ترنسپورت‌های اختصاصی
+                        **تانل قدرتمند، پایدار و ضد اختلال برای سرورهای اوبونتو — با ترنسپورت‌های اختصاصی**
 
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/SpeedwiT/SpeedTunnel)
 [![Go](https://img.shields.io/badge/Go-1.22+-00ADD8.svg)](https://golang.org)
