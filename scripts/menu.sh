@@ -1,0 +1,307 @@
+#!/usr/bin/env bash
+set -e
+# Speed Tunnel - Professional TUI Menu
+# Github: https://github.com/SpeedwiT/SpeedTunnel
+# Channel: @Speedw_IT | Support: @SpeedwIT
+
+CONFIG="/etc/speedtunnel/config.json"
+BIN="/usr/local/bin/speedtunnel"
+SERVICE="speedtunnel"
+VERSION="1.0.0"
+REPO="SpeedwiT/SpeedTunnel"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+MAGENTA='\033[0;35m'
+WHITE='\033[1;37m'
+DIM='\033[2m'
+NC='\033[0m'
+BOLD='\033[1m'
+
+# Helpers
+need_root() {
+  if [[ $EUID -ne 0 ]]; then
+    echo -e "${RED}لطفا با sudo اجرا کنید${NC}"
+    exit 1
+  fi
+}
+
+has_jq() { command -v jq >/dev/null 2>&1; }
+
+ensure_config() {
+  mkdir -p /etc/speedtunnel
+  if [[ ! -f "$CONFIG" ]]; then
+    echo '{"version":"1.0.0","tunnels":[]}' > "$CONFIG"
+    chmod 600 "$CONFIG"
+  fi
+}
+
+banner() {
+  clear
+  echo -e "${CYAN}╔════════════════════════════════════════════════════════════╗${NC}"
+  echo -e "${CYAN}║${NC}  ${BOLD}${WHITE}░░█▀▀ █▀█ █▀▀ █▀▀ █▀▄░░▀█▀ █░█ █▀█ █▀█ █▀▀ █░░${NC} ${CYAN}║${NC}"
+  echo -e "${CYAN}║${NC}  ${BOLD}${WHITE}░░▀▀█ █▀▀ █▀▀ █▀▀ █░█░░░█░ █░█ █░█ █░█ █▀▀ █░░${NC} ${CYAN}║${NC}"
+  echo -e "${CYAN}║${NC}  ${BOLD}${WHITE}░░▀▀▀ ▀░░ ▀▀▀ ▀▀▀ ▀▀░░░░▀░ ▀▀▀ ▀░▀ ▀░▀ ▀▀▀ ▀▀▀${NC} ${CYAN}║${NC}"
+  echo -e "${CYAN}║${NC}                                                          ${CYAN}║${NC}"
+  echo -e "${CYAN}║${NC}   ${GREEN}⚡ Speed Tunnel v${VERSION}${NC}  ${DIM}— Fast • Secure • Anti-DPI${NC}      ${CYAN}║${NC}"
+  echo -e "${CYAN}║${NC}   ${DIM}Github:${NC} ${WHITE}https://github.com/${REPO}${NC}              ${CYAN}║${NC}"
+  echo -e "${CYAN}║${NC}   ${DIM}Channel:${NC} ${WHITE}@Speedw_IT${NC}  ${DIM}Support:${NC} ${WHITE}@SpeedwIT${NC}            ${CYAN}║${NC}"
+  echo -e "${CYAN}╚════════════════════════════════════════════════════════════╝${NC}"
+  echo ""
+}
+
+pause() { echo -ne "${DIM}برای ادامه Enter بزنید...${NC}"; read -r _; }
+
+service_status() {
+  if systemctl is-active --quiet $SERVICE 2>/dev/null; then
+    echo -e "${GREEN}● فعال (running)${NC}"
+  else
+    echo -e "${RED}● خاموش (inactive)${NC}"
+  fi
+}
+
+show_status() {
+  banner
+  echo -e "${BOLD}${WHITE}── وضعیت سرویس ──${NC}"
+  echo -e " سرویس: $(service_status)"
+  if has_jq; then
+    cnt=$(jq '.tunnels | length' "$CONFIG" 2>/dev/null || echo 0)
+    enabled=$(jq '[.tunnels[] | select(.enabled==true)] | length' "$CONFIG" 2>/dev/null || echo 0)
+    echo -e " تانل‌ها: ${CYAN}$cnt${NC} (فعال: ${GREEN}$enabled${NC})"
+    echo ""
+    if [[ "$cnt" -gt 0 ]]; then
+      echo -e "${BOLD}── لیست تانل‌ها ──${NC}"
+      jq -r '.tunnels[] | " \(.id) | \(.name) | \(.role) | \(.transport) | SNI:\(.sni) | 0.0.0.0:\(.listen_port) → \(.remote_addr):\(.remote_port) | ctrl:\(.control_port) | enabled:\(.enabled)"' "$CONFIG" 2>/dev/null | while IFS= read -r line; do
+        enabled=$(echo "$line" | grep -o 'enabled:true' || true)
+        if [[ -n "$enabled" ]]; then
+          echo -e "  ${GREEN}▸${NC} $line"
+        else
+          echo -e "  ${DIM}▸ $line${NC}"
+        fi
+      done
+    fi
+    echo ""
+    # live port checks
+    echo -e "${DIM}── بررسی پورت‌ها (TCP Ping) ──${NC}"
+    jq -r '.tunnels[] | "\(.id) \(.name) \(.listen_port)"' "$CONFIG" 2>/dev/null | while read -r id name port; do
+      if timeout 1 bash -c "cat < /dev/null > /dev/tcp/127.0.0.1/$port" 2>/dev/null; then
+        echo -e "  ${GREEN}✔${NC} $name (127.0.0.1:$port) ${GREEN}open${NC}"
+      else
+        echo -e "  ${RED}✘${NC} $name (127.0.0.1:$port) ${RED}closed${NC}"
+      fi
+    done
+  else
+    cat "$CONFIG"
+  fi
+  echo ""
+  systemctl status $SERVICE --no-pager -l 2>&1 | head -n 30 || true
+  pause
+}
+
+create_tunnel() {
+  banner
+  echo -e "${BOLD}${WHITE}── ایجاد تانل جدید ──${NC}\n"
+  echo -ne "${CYAN}نام تانل: ${NC}"
+  read -r tname
+  [[ -z "$tname" ]] && tname="tunnel-$(date +%s | tail -c 5)"
+
+  echo -e "${YELLOW}نقش سرور را انتخاب کنید:${NC}"
+  echo "  1) iran   (کلاینت - سرور ایران، به خارج وصل میشه)"
+  echo "  2) kharej (سرور - سرور خارج، منتظر اتصال ایران)"
+  echo -ne "${CYAN}انتخاب [1-2]: ${NC}"
+  read -r role_sel
+  if [[ "$role_sel" == "2" ]]; then role="kharej"; else role="iran"; fi
+
+  echo -e "\n${YELLOW}ترنسپورت را انتخاب کنید:${NC}"
+  echo "  1) SpeedTLS      (پیشنهادی - TLS Spoof + Fragment - پرسرعت و ضد DPI)"
+  echo "  2) SpeedHTTP     (HTTP/2 Fake - پایدار، شبیه ترافیک مرورگر)"
+  echo "  3) SpeedReverse  (برای وقتی ایران اینترنت بین‌الملل نداره - ایران به خارج وصل میشه)"
+  echo "  4) SpeedICMP     (اضطراری - fallback ICMP/DNS)"
+  echo -ne "${CYAN}انتخاب [1-4] پیش‌فرض 1: ${NC}"
+  read -r tr_sel
+  case "$tr_sel" in
+    2) transport="speedhttp" ;;
+    3) transport="speedreverse" ;;
+    4) transport="speedicmp" ;;
+    *) transport="speedtls" ;;
+  esac
+
+  echo -ne "${CYAN}پورت شنود (ListenPort) روی سرور خارج [مثلا 443]: ${NC}"
+  read -r listen_port
+  echo -ne "${CYAN}پورت سرویس لوکال روی ایران (RemotePort) [مثلا 443]: ${NC}"
+  read -r remote_port
+  echo -ne "${CYAN}آدرس سرور خارج (فقط برای نقش iran) [مثلا 1.2.3.4]: ${NC}"
+  read -r remote_addr
+  echo -ne "${CYAN}پورت کنترل تانل (ControlPort) [پیش‌فرض 7000]: ${NC}"
+  read -r control_port
+  echo -ne "${CYAN}کلید امنیتی (خالی = خودکار): ${NC}"
+  read -r secret
+  echo -ne "${CYAN}دامنه SNI اسپوف [پیش‌فرض www.digikala.com]: ${NC}"
+  read -r sni
+
+  [[ -z "$listen_port" ]] && listen_port=443
+  [[ -z "$remote_port" ]] && remote_port=443
+  [[ -z "$control_port" ]] && control_port=7000
+  [[ -z "$sni" ]] && sni="www.digikala.com"
+  if [[ -z "$secret" ]]; then
+    secret=$(openssl rand -hex 16 2>/dev/null || cat /proc/sys/kernel/random/uuid | tr -d '-')
+  fi
+  if [[ "$role" == "kharej" ]]; then remote_addr="0.0.0.0"; fi
+  [[ -z "$remote_addr" ]] && remote_addr="YOUR_KHAREJ_IP"
+
+  tid=$(cat /proc/sys/kernel/random/uuid 2>/dev/null | cut -c1-8 || echo "t$(date +%s | tail -c 6)")
+  tid="st-${tid}"
+
+  ensure_config
+  if has_jq; then
+    tmp=$(mktemp)
+    jq --arg id "$tid" --arg name "$tname" --arg role "$role" --arg transport "$transport" --argjson listen_port "$listen_port" --argjson remote_port "$remote_port" --arg remote_addr "$remote_addr" --argjson control_port "$control_port" --arg secret "$secret" --arg sni "$sni" \
+      '.tunnels += [{"id":$id,"name":$name,"role":$role,"transport":$transport,"listen_port":$listen_port,"remote_port":$remote_port,"remote_addr":$remote_addr,"control_port":$control_port,"secret":$secret,"sni":$sni,"enabled":true,"created_at": (now|todate)}]' "$CONFIG" > "$tmp" && mv "$tmp" "$CONFIG"
+    chmod 600 "$CONFIG"
+  else
+    echo "jq not found, please install jq"
+    return
+  fi
+
+  echo ""
+  echo -e "${GREEN}✔ تانل ایجاد شد!${NC}"
+  echo -e "  ID: ${WHITE}$tid${NC}"
+  echo -e "  Secret: ${WHITE}$secret${NC}"
+  echo -e "  ${DIM}این Secret را در هر دو سرور یکسان وارد کنید${NC}"
+  echo -e "  ${YELLOW}برای اعمال: گزینه 8 (ریستارت سرویس) را بزنید${NC}"
+  pause
+}
+
+list_tunnels() {
+  banner
+  echo -e "${BOLD}${WHITE}── مدیریت تانل‌ها ──${NC}\n"
+  if ! has_jq; then echo "jq required"; pause; return; fi
+  cnt=$(jq '.tunnels | length' "$CONFIG")
+  if [[ "$cnt" -eq 0 ]]; then
+    echo -e "${YELLOW}هیچ تانلی وجود ندارد.${NC}"
+    pause; return
+  fi
+  jq -r '.tunnels | to_entries[] | "\(.key+1)) \(.value.id) | \(.value.name) | \(.value.role) | \(.value.transport) | :\(.value.listen_port) → :\(.value.remote_port) | enabled:\(.value.enabled)"' "$CONFIG" | while IFS= read -r line; do
+    echo -e "  ${CYAN}$line${NC}"
+  done
+  echo ""
+  echo "  d) حذف تانل   e) ویرایش SNI/پورت   t) فعال/غیرفعال   b) بازگشت"
+  echo -ne "${CYAN}انتخاب: ${NC}"
+  read -r sel
+  case "$sel" in
+    d|D)
+      read -rp "ID تانل برای حذف: " del_id
+      tmp=$(mktemp)
+      jq --arg id "$del_id" '.tunnels |= map(select(.id != $id))' "$CONFIG" > "$tmp" && mv "$tmp" "$CONFIG"
+      echo -e "${GREEN}حذف شد${NC}"; sleep 1
+      ;;
+    e|E)
+      read -rp "ID تانل: " eid
+      read -rp "SNI جدید (خالی = بدون تغییر): " nsni
+      read -rp "ListenPort جدید (خالی = بدون تغییر): " nlp
+      tmp=$(mktemp)
+      if [[ -n "$nsni" && -n "$nlp" ]]; then
+        jq --arg id "$eid" --arg sni "$nsni" --argjson lp "$nlp" '(.tunnels[] | select(.id==$id) | .sni) |= $sni | (.tunnels[] | select(.id==$id) | .listen_port) |= $lp' "$CONFIG" > "$tmp" && mv "$tmp" "$CONFIG"
+      elif [[ -n "$nsni" ]]; then
+        jq --arg id "$eid" --arg sni "$nsni" '(.tunnels[] | select(.id==$id) | .sni) |= $sni' "$CONFIG" > "$tmp" && mv "$tmp" "$CONFIG"
+      elif [[ -n "$nlp" ]]; then
+        jq --arg id "$eid" --argjson lp "$nlp" '(.tunnels[] | select(.id==$id) | .listen_port) |= $lp' "$CONFIG" > "$tmp" && mv "$tmp" "$CONFIG"
+      fi
+      echo -e "${GREEN}ویرایش شد${NC}"; sleep 1
+      ;;
+    t|T)
+      read -rp "ID تانل: " tid2
+      tmp=$(mktemp)
+      jq --arg id "$tid2" '(.tunnels[] | select(.id==$id) | .enabled) |= (if . then false else true end)' "$CONFIG" > "$tmp" && mv "$tmp" "$CONFIG"
+      echo -e "${GREEN}تغییر وضعیت انجام شد${NC}"; sleep 1
+      ;;
+    *) ;;
+  esac
+}
+
+bot_setup() {
+  banner
+  echo -e "${BOLD}${WHITE}── تنظیمات ربات تلگرام ──${NC}\n"
+  cur_token=$(jq -r '.bot_token // ""' "$CONFIG")
+  cur_admin=$(jq -r '.bot_admin_id // 0' "$CONFIG")
+  echo -e " توکن فعلی: ${DIM}${cur_token:0:12}...${NC}"
+  echo -e " Admin ID فعلی: ${WHITE}$cur_admin${NC}\n"
+  echo -ne "${CYAN}توکن ربات (خالی = بدون تغییر): ${NC}"
+  read -r ntok
+  echo -ne "${CYAN}آیدی عددی ادمین (خالی = بدون تغییر): ${NC}"
+  read -r nadm
+  tmp=$(mktemp)
+  if [[ -n "$ntok" ]]; then
+    jq --arg t "$ntok" '.bot_token = $t' "$CONFIG" > "$tmp" && mv "$tmp" "$CONFIG"
+  fi
+  if [[ -n "$nadm" ]]; then
+    jq --argjson a "$nadm" '.bot_admin_id = $a' "$CONFIG" > "$tmp" && mv "$tmp" "$CONFIG"
+  fi
+  echo -e "${GREEN}ذخیره شد. برای اعمال سرویس را ریستارت کنید.${NC}"
+  pause
+}
+
+update_from_github() {
+  banner
+  echo -e "${YELLOW}در حال بررسی آپدیت از گیتهاب...${NC}"
+  echo -e "${DIM}Repo: https://github.com/${REPO}${NC}\n"
+  tmpdir=$(mktemp -d)
+  if curl -fsSL "https://github.com/${REPO}/archive/refs/heads/main.tar.gz" -o "$tmpdir/main.tar.gz"; then
+    echo -e "${GREEN}دانلود شد. در حال نصب...${NC}"
+    tar -xzf "$tmpdir/main.tar.gz" -C "$tmpdir"
+    # Try to run install.sh from extracted
+    extracted=$(find "$tmpdir" -maxdepth 1 -type d -name "SpeedTunnel*")
+    if [[ -f "$extracted/install.sh" ]]; then
+      bash "$extracted/install.sh" --update
+    else
+      echo -e "${YELLOW}فایل install.sh یافت نشد، آپدیت دستی انجام دهید:${NC}"
+      echo "bash <(curl -s https://raw.githubusercontent.com/${REPO}/main/install.sh)"
+    fi
+  else
+    echo -e "${RED}خطا در دانلود. اینترنت را بررسی کنید.${NC}"
+    echo -e "${DIM}دستور دستی: bash <(curl -s https://raw.githubusercontent.com/${REPO}/main/install.sh)${NC}"
+  fi
+  rm -rf "$tmpdir"
+  pause
+}
+
+main_menu() {
+  need_root
+  ensure_config
+  while true; do
+    banner
+    echo -e "${BOLD}${WHITE}  منوی اصلی${NC}  $(service_status)  ${DIM}Config: $CONFIG${NC}\n"
+    echo -e "  ${GREEN}1)${NC} ${WHITE}ایجاد تانل جدید${NC}          ${DIM}— Create Tunnel${NC}"
+    echo -e "  ${GREEN}2)${NC} ${WHITE}مدیریت تانل‌ها${NC}            ${DIM}— List / Edit / Delete / Toggle${NC}"
+    echo -e "  ${GREEN}3)${NC} ${WHITE}مشاهده وضعیت${NC}              ${DIM}— Status & Health Check${NC}"
+    echo -e "  ${GREEN}4)${NC} ${WHITE}تنظیمات ربات تلگرام${NC}        ${DIM}— Telegram Bot${NC}"
+    echo -e "  ${GREEN}5)${NC} ${WHITE}نمایش لاگ سرویس${NC}            ${DIM}— Logs${NC}"
+    echo -e "  ${GREEN}6)${NC} ${WHITE}آپدیت از گیتهاب${NC}             ${DIM}— Update from Github${NC}"
+    echo -e "  ${GREEN}7)${NC} ${WHITE}نمایش کانفیگ خام${NC}            ${DIM}— Show Config${NC}"
+    echo -e "  ${GREEN}8)${NC} ${YELLOW}ریستارت سرویس${NC}"
+    echo -e "  ${GREEN}9)${NC} ${RED}حذف Speed Tunnel${NC}"
+    echo -e "  ${GREEN}0)${NC} خروج"
+    echo ""
+    echo -ne "${CYAN}انتخاب شما [0-9]: ${NC}"
+    read -r choice
+    case "$choice" in
+      1) create_tunnel ;;
+      2) list_tunnels ;;
+      3) show_status ;;
+      4) bot_setup ;;
+      5) banner; journalctl -u $SERVICE --no-pager -n 100 2>&1 | head -n 100; echo ""; systemctl status $SERVICE --no-pager 2>&1 | head -n 20; pause ;;
+      6) update_from_github ;;
+      7) banner; cat "$CONFIG" | head -n 100; echo ""; pause ;;
+      8) systemctl restart $SERVICE && echo -e "${GREEN}✔ سرویس ریستارت شد${NC}" || echo -e "${RED}خطا در ریستارت${NC}"; sleep 1 ;;
+      9) echo -ne "${RED}آیا مطمئنید؟ (y/N): ${NC}"; read -r c; if [[ "$c" == "y" || "$c" == "Y" ]]; then systemctl stop $SERVICE 2>/dev/null; systemctl disable $SERVICE 2>/dev/null; rm -f /etc/systemd/system/$SERVICE.service; systemctl daemon-reload; echo -e "${GREEN}حذف شد (باینری و کانفیگ باقی ماند)${NC}"; fi; pause ;;
+      0) echo -e "${GREEN}خداحافظ! @Speedw_IT${NC}"; exit 0 ;;
+      *) echo -e "${RED}گزینه نامعتبر${NC}"; sleep 1 ;;
+    esac
+  done
+}
+
+main_menu
